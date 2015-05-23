@@ -1,3 +1,5 @@
+import com.redis._
+
 class PrimesDataManager(maxValue: Int) {   
    val _maxValue = maxValue
    // TODO Redis magic here in the constructor to build an internal list of integers.
