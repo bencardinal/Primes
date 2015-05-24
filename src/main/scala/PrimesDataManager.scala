@@ -1,4 +1,7 @@
-class PrimesDataManager(maxValue: Int) {   
+import com.redis._
+
+class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, deleteKey: Boolean) {  
+   val dbKey = "PrimesDataManager:primeArray";
    val _maxValue = maxValue
    // TODO Redis magic here in the constructor to build an internal list of integers.
    
@@ -7,14 +10,41 @@ class PrimesDataManager(maxValue: Int) {
    // the databse to get a list of already calculated primes whose square is
    // less than the next potential prime.
    // Once a prime is found, push it to the database.
+
+   // primeArray will hold the local copy of the primes.
    val primeArray = new scala.collection.mutable.ArrayBuffer[Int]()
-   val primeIter = Iterator.from(2).filter(i => primeArray.takeWhile(j => j * j <= i).forall(k => i %k > 0))
+   // Default to the first prime, 2
    var currentPrime = 2
+
+//   try {
+      // Will throw a ConnectException if unable to connect.
+      val r = new RedisClient(redisHost, redisPort)
+      
+      if (deleteKey) {
+         r.del(dbKey)
+      }
+      
+      if (r.exists(dbKey)) {
+         val count: Long = r.llen(dbKey).getOrElse(0)
+         println("Got " + count + " existing primes from db")
+         val dbList = r.lrange(dbKey, 0, count.toInt).get
+         dbList.foreach(a => primeArray.append(a.get.toInt))
+         currentPrime = primeArray.last
+      }
+      
+//   } catch {
+//      case e:java.net.ConnectException => println("Unable to connect to redis server, using local store")
+//   }
+
+   val primeIter = Iterator.from(currentPrime).filter(i => primeArray.takeWhile(j => j * j <= i).forall(k => i %k > 0))
    while (currentPrime <= maxValue)
    {
       currentPrime = primeIter.next
       primeArray.append(currentPrime)
+      r.rpush(dbKey, currentPrime)
    }
+   
+   //r.rpush(dbKey, primeArray)
    
    def GetPrimes(lowerLimit: Int, upperLimit: Int): Array[Int] = {
              
@@ -28,16 +58,10 @@ class PrimesDataManager(maxValue: Int) {
                "lowerLimit must not be negative")                
       }
       
-      if (lowerLimit >= upperLimit) {
+      if (lowerLimit > upperLimit) {
          throw new IllegalArgumentException(
-               "lowerLimit must be less than upperLimit")                
+               "lowerLimit must be less than or equal to upperLimit")                
       }
-
-      var buf = new scala.collection.mutable.ArrayBuffer[Int]()
-       
-      // TODO stub
-      buf.append(lowerLimit)
-      buf.append(upperLimit)
 
       // Use a stream to build the values as needed and then write them to
       // the Redis database.
@@ -48,6 +72,6 @@ class PrimesDataManager(maxValue: Int) {
       
       
       //return primes.dropWhile(p => p <= lowerLimit).takeWhile(p => p <= upperLimit)
-      return primeArray.dropWhile(p => p <= lowerLimit).takeWhile(p => p <= upperLimit).toArray
+      return primeArray.dropWhile(p => p < lowerLimit).takeWhile(p => p <= upperLimit).toArray
    }   
 }

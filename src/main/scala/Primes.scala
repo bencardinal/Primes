@@ -5,7 +5,7 @@ object Primes {
       } else {
          try {
             val maxValue = args(0).toInt
-            val dm = new PrimesDataManager(maxValue)
+            val dm = new PrimesDataManager(maxValue, "localhost", 6379, false)
             
             while (true) {
                print ("Enter a lower bound: ")
@@ -22,7 +22,6 @@ object Primes {
             }
          } catch {
             case e:NumberFormatException => println("Argument is not a valid integer string")
-            case e:Exception => println(e.getMessage())
          }
       }
    }
