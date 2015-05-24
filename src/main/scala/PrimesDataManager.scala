@@ -1,6 +1,6 @@
 import com.redis._
 
-class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, deleteKey: Boolean) {  
+class PrimesDataManager(maxValue: Long, redisHost: String, redisPort: Int, deleteKey: Boolean) {  
    val dbKey = "PrimesDataManager:primeArray";
    val _maxValue = maxValue
    // TODO Redis magic here in the constructor to build an internal list of integers.
@@ -12,41 +12,61 @@ class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, delete
    // Once a prime is found, push it to the database.
 
    // primeArray will hold the local copy of the primes.
-   val primeArray = new scala.collection.mutable.ArrayBuffer[Int]()
-   // Default to the first prime, 2
+   //val primeArray = new scala.collection.mutable.ArrayBuffer[Int]()
+   // Default to the second prime, 3, since the database will be initialized with
+   // the first prime, 2.
    var currentPrime = 2
 
-//   try {
-      // Will throw a ConnectException if unable to connect.
-      val r = new RedisClient(redisHost, redisPort)
-      
-      if (deleteKey) {
-         r.del(dbKey)
-      }
-      
-      if (r.exists(dbKey)) {
-         val count: Long = r.llen(dbKey).getOrElse(0)
-         println("Got " + count + " existing primes from db")
-         val dbList = r.lrange(dbKey, 0, count.toInt).get
-         dbList.foreach(a => primeArray.append(a.get.toInt))
-         currentPrime = primeArray.last
-      }
-      
-//   } catch {
-//      case e:java.net.ConnectException => println("Unable to connect to redis server, using local store")
-//   }
-
-   val primeIter = Iterator.from(currentPrime).filter(i => primeArray.takeWhile(j => j * j <= i).forall(k => i %k > 0))
-   while (currentPrime <= maxValue)
-   {
-      currentPrime = primeIter.next
-      primeArray.append(currentPrime)
-      r.rpush(dbKey, currentPrime)
+   val client = new RedisClient(redisHost, redisPort)
+   
+   if (deleteKey) {
+      client.del(dbKey)
    }
    
-   //r.rpush(dbKey, primeArray)
+   if (client.exists(dbKey)) {
+      if (client.getType(dbKey).getOrElse("").equals("list")) {
+         // There is an assumption here that the list of data in this key
+         // contains only a sequential set of valid prime numbers starting
+         // with 2.  Things will go badly if this is not the case!
+         val count: Long = client.llen(dbKey).getOrElse(0)
+         val dbList = client.lrange(dbKey, 0, count.toInt).getOrElse(List())
+         //dbList.foreach(a => primeArray.append(a.get.toInt))
+         currentPrime = dbList.last.get.toInt
+      } else {
+         // This is MY key and someone has messed with it so I'll show them!
+         client.del(dbKey)
+         client.lpush(dbKey, 2)
+      }
+   }
+   else  
+   { 
+      client.lpush(dbKey, 2)
+   }
+
+   val dbScanner: Stream[Long] = Stream.from(0).map(i => client.lindex(dbKey, i).getOrElse("-1").toLong)
    
-   def GetPrimes(lowerLimit: Int, upperLimit: Int): Array[Int] = {
+   //var largestPrime = currentPrime
+   val primeIter = Iterator.from(currentPrime) // Start from the current prime (may be >2 if loaded from database)
+   .filter(i => dbScanner                      // Filter based on the current contents of the primeArray ...
+         .takeWhile(j => j * j <= i)           // ... and take values whose square is less than the current value
+         .forall(k => i % k > 0))              // Yield the value if it is not evenly divisible by any previous prime
+   
+   primeIter.next();
+   
+   primeIter.takeWhile(p => p <= maxValue)     // Iterator will return as long as the prime is less or equal to max
+   .foreach(p => {                             
+      //primeArray.append(p)                   // Append to local array
+      client.rpush(dbKey, p)                   // Push to databse
+      //largestPrime = p                         // Update largestPrime
+      //r.rpush(dbKey, p)                        // Push to database
+      })
+
+    dbScanner.dropWhile(p => p > 0)
+    
+   /*
+    * Get an array of prime numbers between lowerLimit and upperLimit inclusive
+    */
+   def GetPrimes(lowerLimit: Long, upperLimit: Long): Array[Long] = {
              
       if (upperLimit > _maxValue) {
          throw new IllegalArgumentException(
@@ -65,13 +85,19 @@ class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, delete
 
       // Use a stream to build the values as needed and then write them to
       // the Redis database.
-      lazy val primes: Stream[Int] = 
-         2 #:: Stream.from(3, 2)
-         .filter(i => primes.takeWhile(j => j * j <= i)
-               .forall(k => i % k > 0)) // filter those that are not divisible by earlier calculated prime
+//      lazy val primes: Stream[Int] = 
+//         2 #:: Stream.from(3, 2)
+//         .filter(i => primes.takeWhile(j => j * j <= i)
+//               .forall(k => i % k > 0)) // filter those that are not divisible by earlier calculated prime
       
       
       //return primes.dropWhile(p => p <= lowerLimit).takeWhile(p => p <= upperLimit)
-      return primeArray.dropWhile(p => p < lowerLimit).takeWhile(p => p <= upperLimit).toArray
+      //val count: Long = client.llen(dbKey).getOrElse(0)
+      //val dbList = client.lrange(dbKey, 0, count.toInt).getOrElse(List())
+      //dbList.dropWhile(p => p.get.toInt < lowerLimit).takeWhile(p => p.get.toInt <= upperLimit).map(p => p.get.toInt).toArray
+      //primeArray.dropWhile(p => p < lowerLimit).takeWhile(p => p <= upperLimit).toArray
+      //val dbScanner: Iterator[Int] = Iterator.from(0).map(i => client.lindex(dbKey, i).get.toInt)
+      dbScanner.dropWhile(p => p < lowerLimit).takeWhile(p => p <= upperLimit && p > 0).toArray
+
    }   
 }

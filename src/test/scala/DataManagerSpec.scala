@@ -9,7 +9,7 @@ class DataManagerSpec extends FlatSpec with Matchers {
       }
    }
    val t0 = java.lang.System.currentTimeMillis()
-   val dm = new PrimesDataManager(upperBound, "localhost", 6379, true)
+   val dm = new PrimesDataManager(upperBound, "localhost", 6379, false)
    val t1 = java.lang.System.currentTimeMillis()
    info("Constructor took: "+(t1-t0)+" msec")
    
