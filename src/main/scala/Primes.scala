@@ -5,7 +5,7 @@ object Primes {
       } else {
          try {
             val maxValue = args(0).toInt
-            val dm = new PrimesDataManager(maxValue, "localhost", 6379, false)
+            val dm = new PrimesDataManager(maxValue)
             
             while (true) {
                print ("Enter a lower bound: ")
