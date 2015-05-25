@@ -1,7 +1,12 @@
 import org.scalatest._
 import com.redis._
 
-class DataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
+/** Unit test for PrimesDataManager
+ *  
+ *  Performs several data integrity checks as well as Redis server tests.
+ *  
+ */
+class PrimesDataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
 
    // Use "before" to verify that server is available.  Not the most elegant
    // way to do this but there does not appear to be a "ping" method in the 

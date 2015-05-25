@@ -10,13 +10,15 @@ object Primes {
             while (true) {
                print ("Enter a lower bound: ")
                val lower = io.StdIn.readInt()
+               
                print ("Enter a lower bound: ")
                val upper = io.StdIn.readInt()
+               
                val result = dm.GetPrimes(lower, upper)
+               val sum = result.sum
+               val mean = sum / result.length
                println("Result:")
                println("Prime numbers: ["+result.mkString(", ") + "]")
-               val sum = result.sum
-               val mean = sum.toDouble / result.length.toDouble
                println("Sum: " + sum)
                println("Mean: " + mean)
             }
