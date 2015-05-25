@@ -63,6 +63,8 @@ class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, delete
       primeArray.append(p)                  // ... Append to local array
       dbClient.rpush(dbKey, p)              // ... Push to databse
    })
+   
+   dbClient.disconnect
 
    /*
     * Get an array of prime numbers between lowerLimit and upperLimit inclusive
