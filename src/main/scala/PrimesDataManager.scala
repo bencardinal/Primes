@@ -1,6 +1,10 @@
 import com.redis._
 
-/** Prime number class that will generate a list of primes which will be stored in a Redis database
+object PrimesDataManagerParameters {
+   val dbKey = "PrimesDataManager:primeArray";   
+}
+
+/** Generates primes which will be stored in a Redis database
  * 
  * Any values already in the Redis database will be loaded first and then
  * additional values will be generated up to maxValue.
@@ -8,40 +12,40 @@ import com.redis._
  * @constructor Create a new PrimesDataManager loaded with primes up to maxValue inclusive
  * @param redisHost the hostname where the Redis server is running ("localhost" if not provided)
  * @param redisPort the port that the Redis server is listening on (3769 if not provided)
- * 
+ * @param deleteKey Will delete the existing key from database and force data regeneration (false if not provided)
  */
+ 
 class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, deleteKey: Boolean) {
    def this(maxValue: Int) = this(maxValue, "localhost", 6379, false) // Auxiliary constructor with max only
    
    if (maxValue < 2) throw new IllegalArgumentException("maxValue must be greater than or equal to 2")   
 
-   val dbKey = "PrimesDataManager:primeArray";                      // Key used to store primes
+   val dbKey = PrimesDataManagerParameters.dbKey;                   // Key for stored primes
    val _maxValue = maxValue                                         // Keep max value for error checking
    val primeArray = new scala.collection.mutable.ArrayBuffer[Int]() // Local copy of primes
 
    // Will throw an ConnectException redis server is not available
    val dbClient = new RedisClient(redisHost, redisPort)
    
-   if (deleteKey) {
-      dbClient.del(dbKey)
-   }
-   
    if (  !deleteKey
       && dbClient.exists(dbKey)
       && dbClient.getType(dbKey).getOrElse("").equals("list")
       ) {
          // There is an assumption here that the list of data in this key
-         // contains only a sequential set of valid prime numbers starting
-         // with 2.  Things will go badly if this is not the case!
-         val count: Long = dbClient.llen(dbKey).getOrElse(0)
-         
+         // contains only a sequential set of valid prime numbers.  If there
+         // is a bunch of bad data then things will go badly.  Validating all
+         // the cached values would negate the benefit of loading them.
+         val count: Long = dbClient.llen(dbKey).getOrElse(0)         
          primeArray.appendAll(
                dbClient.lrange(dbKey, 0, count.toInt) // Get entire list
                .getOrElse(List())                     // Return an empty list if that fails
                .map(p => p.get.toInt))                // And map Option to an integer.
-   } else {
-      // Need to reinitialize the database and local array.
-      // Initial state is loaded with 2 and 3
+   }
+   
+   if (primeArray.length < 2) {
+      // The array should contain at least 2 values (2, 3) so if it doesn't
+      // then reset the initial state and load with 2 and 3
+      primeArray.clear()
       dbClient.del(dbKey)
       primeArray.append(2, 3)
       dbClient.rpush(dbKey, 2, 3)
@@ -61,7 +65,7 @@ class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, delete
    
    dbClient.disconnect
 
-   /** Get an array of prime numbers in a given range
+   /** Get an array of prime numbers in the given range
     * 
     * @param lowerLimit minimum allowable prime number, inclusive
     * @param upperLimit maximum allowable prime number, inclusive

@@ -3,7 +3,8 @@ import com.redis._
 
 /** Unit test for PrimesDataManager
  *  
- *  Performs several data integrity checks as well as Redis server tests.
+ *  Performs several data integrity checks as well as Redis server tests.  It is expected
+ *  that a Redis server is running on localhost:6379 otherwise the test suite will abort.
  *  
  */
 class PrimesDataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
@@ -99,7 +100,7 @@ class PrimesDataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
       try
       {
          val r = new RedisClient("localhost", 6379)
-         r.set("PrimesDataManager:primeArray", "Evil data")
+         r.set(PrimesDataManagerParameters.dbKey, "Evil data")
       } catch {
          case e:Throwable =>  {
             alert("Failed to create RedisClient so this test cannot be run!")
@@ -110,6 +111,24 @@ class PrimesDataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
       val primes = dm.GetPrimes(0, 10)
       primes should contain only(2, 3, 5, 7)
       primes should have length 4         
+   }
+   
+   it should "handle a case where 2 is the only value in the database list" in {
+      try
+      {
+         val r = new RedisClient("localhost", 6379)
+         r.del(PrimesDataManagerParameters.dbKey)
+         r.rpush(PrimesDataManagerParameters.dbKey, 2)
+      } catch {
+         case e:Throwable =>  {
+            alert("Failed to create RedisClient so this test cannot be run!")
+            cancel(e)
+         }         
+      }
+      val dm = new PrimesDataManager(10)
+      val primes = dm.GetPrimes(0, 10)
+      primes should contain only(2, 3, 5, 7)
+      primes should have length 4               
    }
 
    it should "return 79,498 elements between 0 and 1,000,000" in {
