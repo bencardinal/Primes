@@ -1,5 +1,6 @@
 import com.redis._
 
+/** Stores some basic parameters used in the PrimesDataManager (e.g. database key) */
 object PrimesDataManagerParameters {
    val dbKey = "PrimesDataManager:primeArray";   
 }
