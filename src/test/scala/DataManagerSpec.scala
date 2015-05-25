@@ -9,6 +9,12 @@ class DataManagerSpec extends FlatSpec with Matchers {
       }
    }
    
+   "The PrimesDataManager constructor" should "throw IllegalArgumentException if max value is less than 2" in {
+      a [RuntimeException] should be thrownBy {
+         var badDm = new PrimesDataManager(2, "badhost", 6379, true)
+      }
+   }
+
    "The PrimesDataManager constructor" should "only add each prime once when loading from cached values" in {
       val dm1 = new PrimesDataManager(10, "localhost", 6379, true)  // Clear database cache
       val dm2 = new PrimesDataManager(20, "localhost", 6379, false) // Reuse database cache (up to 10)
@@ -35,6 +41,11 @@ class DataManagerSpec extends FlatSpec with Matchers {
       a [IllegalArgumentException] should be thrownBy {
          dm.GetPrimes(5, 4)
       }
+   }
+   
+   "The PrimesDataManager" should "include the maximum value if that value is also a prime" in {
+      val maxIsPrimeDm = new PrimesDataManager(23, "localhost", 6379, true)
+      maxIsPrimeDm.GetPrimes(0, 23) should contain (23)
    }
    
    "The PrimesDataManager" should "return a list of 4 primes between 0 and 10: (2, 3, 5, 7)" in {

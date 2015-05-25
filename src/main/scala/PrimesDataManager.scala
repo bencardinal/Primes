@@ -3,6 +3,8 @@ import com.redis._
 class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, deleteKey: Boolean) {
    def this(maxValue: Int) = this(maxValue, "localhost", 6379, false) // Auxiliary constructor with max only
    
+   if (maxValue < 2) throw new IllegalArgumentException("maxValue must be greater than or equal to 2")
+   
    val dbKey = "PrimesDataManager:primeArray";
    
    // Store off max value for error checking later on
