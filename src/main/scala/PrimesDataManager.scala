@@ -23,7 +23,7 @@ class PrimesDataManager(maxValue: Int, redisHost: String, redisPort: Int, delete
    if (maxValue < 2) throw new IllegalArgumentException("maxValue must be greater than or equal to 2")   
 
    val _dbKey = PrimesDataManagerParameters.dbKey;                   // Key for stored primes
-   val _maxValue = maxValue                                         // Keep max value for error checking
+   val _maxValue = maxValue                                          // Keep max value for error checking
    val _primeArray = new scala.collection.mutable.ArrayBuffer[Int]() // Local copy of primes
 
    // Will throw an ConnectException redis server is not available
