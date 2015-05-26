@@ -18,8 +18,8 @@ class PrimesDataManagerSpec extends FlatSpec with Matchers with BeforeAndAfter {
          val r = new RedisClient("localhost", 6379)
          r.disconnect
       } catch {
-         case e:Throwable =>  {
-            alert("Unable to verify that redis server is available, Are you sure the Redis server is running on localhost:6379?")
+         case e:RuntimeException =>  {
+            alert("Unable to verify that redis server is available. Are you sure the Redis server is running on localhost:6379?")
             cancel(e)
          }
       }
