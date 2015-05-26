@@ -11,6 +11,7 @@ object PrimesDataManagerParameters {
  * additional values will be generated up to maxValue.
  * 
  * @constructor Create a new PrimesDataManager loaded with primes up to maxValue inclusive
+ * @param maxValue generate prime numbers from 2 up to this maxValue, inclusive (maxValue need not be prime)
  * @param redisHost the hostname where the Redis server is running ("localhost" if not provided)
  * @param redisPort the port that the Redis server is listening on (3769 if not provided)
  * @param deleteKey Will delete the existing key from database and force data regeneration (false if not provided)
