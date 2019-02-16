@@ -20,7 +20,7 @@ object Primes {
                print ("Enter a lower bound: ")
                val lower = io.StdIn.readInt()
                
-               print ("Enter a lower bound: ")
+               print ("Enter an upper bound: ")
                val upper = io.StdIn.readInt()
                
                val result = dm.GetPrimes(lower, upper)
